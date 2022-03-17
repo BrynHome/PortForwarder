@@ -24,24 +24,25 @@ def config():
 
 def create_sock(addr):
     if socket.has_dualstack_ipv6():
-        return socket.create_server(addr, family=socket.AF_INET6, dualstack_ipv6=True)
+        return socket.create_server(addr, family=socket.AF_INET, reuse_port=True, dualstack_ipv6=True)
     else:
-        return socket.create_server(addr)
+        return socket.create_server(addr, family=socket.AF_INET, reuse_port=True)
 
 
 def thread(*settings):
-    # server_sock = create_sock(('', settings[0]))
-    server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    server_sock.bind(('', settings[0]))
+    server_sock = create_sock(('', settings[0]))
+    # server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    # server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    # server_sock.bind(('', settings[0]))
     server_sock.listen(BACKLOG)
     # ADD LOGGING HERE
     while True:
         src_sock, src_address = server_sock.accept()
         #ADD LOGGING
         try:
-            out_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            out_sock.connect((settings[1], settings[2]))
+            out_sock = socket.create_connection((settings[1], settings[2]))
+            # out_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            # out_sock.connect((settings[1], settings[2]))
             #ADD LOGGING
             src_to_dest = threading.Thread(target=traffic, args=(src_sock, out_sock))
             dest_to_src = threading.Thread(target=traffic, args=(out_sock, src_sock))
@@ -52,7 +53,7 @@ def thread(*settings):
             # ADD LOGGING
 
 
-def traffic(src, dest) :
+def traffic(src, dest):
     src_host, src_port = src.getsockname()
     dest_host, dest_port = dest.getsockname()
     while True:
