@@ -1,6 +1,8 @@
+import signal
 import socket
 import threading
 import sys
+import time
 
 BACKLOG = 10
 BUFF_SIZE = 4096
@@ -8,9 +10,16 @@ BUFF_SIZE = 4096
 
 def main():
     configurations = config()
-    for settings in configurations:
-        a = threading.Thread(target=thread, args=settings)
-        a.start()
+    a = []
+    try:
+        for settings in configurations:
+            a.append(threading.Thread(target=thread, args=settings, daemon=True))
+            a[len(a) - 1].start()
+        while True:
+            time.sleep(2)
+    except KeyboardInterrupt:
+        print("Exiting server")
+        exit(1)
 
 
 def config():
@@ -31,11 +40,17 @@ def create_sock(addr):
 
 
 def thread(*settings):
-    server_sock = create_sock(('', settings[0]))
+    server_sock = 0
     # server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     # server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     # server_sock.bind(('', settings[0]))
-    server_sock.listen(BACKLOG)
+    try:
+        server_sock = create_sock(('', settings[0]))
+        server_sock.listen(BACKLOG)
+    except Exception as e:
+        print("Error starting listening on port " + str(settings[0]) + ". Traffic for this port will not be forwarded.")
+        return
+
     print(
         "Server Listening on port " + str(settings[0]) + " forwarding to " + settings[1] + " port " + str(settings[2]))
     # ADD LOGGING HERE
@@ -59,7 +74,7 @@ def thread(*settings):
             src_to_dest.start()
             dest_to_src.start()
         except Exception as e:
-            print("Temp err")
+            print("Error during connection")
             # ADD LOGGING
 
 
@@ -84,10 +99,5 @@ def traffic(src, dest):
             break
 
 
-
 if __name__ == '__main__':
-    try:
-        main()
-    except KeyboardInterrupt as e:
-        print("Server Shutdown")
-        exit()
+    main()
