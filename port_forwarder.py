@@ -24,12 +24,21 @@ def main():
 
 def config():
     configurations = list()
-    file = open("port_forward.config", "r")
-    lines = file.readlines()
-    for line in lines:
-        splits = line.split()
-        configurations.append((int(splits[0]), splits[1], int(splits[2])))
-    return configurations
+
+    try:
+        file = open("port_forward.config", "r")
+        lines = file.readlines()
+        if len(lines) == 0:
+            print("Config file empty")
+            exit(0)
+
+        for line in lines:
+            splits = line.split()
+            configurations.append((int(splits[0]), splits[1], int(splits[2])))
+        return configurations
+    except FileNotFoundError as e:
+        print("Configuration not found")
+        exit(0)
 
 
 def create_sock(addr):
@@ -90,12 +99,16 @@ def traffic(src, dest):
                       + dest_info[0] + " port " + str(src_info[1]))
                 dest.send(buf)
             else:
-                print("Close src & dest temp")
-                src.close()
-                dest.close()
+                print("Closing " + src_info[0])
+                dest.send(buf)
+                dest.shutdown()
+                #dest.close()
+                break
             # ADD LOGGING?
         except Exception as e:
-            print("Err temp")
+            print("Closing conn " + dest_info[0])
+            src.close()
+            dest.close()
             break
 
 
